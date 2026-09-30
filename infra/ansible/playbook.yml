@@ -1,0 +1,67 @@
+---
+- name: Configure Taskflow API Host
+  hosts: app_servers
+  become: true
+  vars:
+    node_version: "20"
+    docker_image: "localhost:5001/taskflow-api:c92d7f5"
+    app_port: 8080
+
+  tasks:
+    - name: Update system packages
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+
+    - name: Install prerequisite utilities
+      ansible.builtin.dnf:
+        name:
+          - curl
+          - git
+          - tar
+        state: present
+
+    - name: Install Docker CE
+      ansible.builtin.dnf:
+        name: docker
+        state: present
+
+    - name: Ensure Docker service is enabled and started
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add ec2-user to docker group
+      ansible.builtin.user:
+        name: ec2-user
+        groups: docker
+        append: true
+
+    - name: Install Node.js 20 LTS
+      ansible.builtin.dnf:
+        name:
+          - nodejs
+          - npm
+        state: present
+
+    - name: Verify Node.js and Docker installation
+      ansible.builtin.command:
+        cmd: "{{ item }}"
+      register: tool_check
+      changed_when: false
+      loop:
+        - node -v
+        - docker --version
+
+    - name: Pull and run taskflow-api container from Lab 07
+      community.docker.docker_container:
+        name: taskflow-api
+        image: "{{ docker_image }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "{{ app_port }}:8080"
+        env:
+          NODE_ENV: "staging"
+          PORT: "8080"

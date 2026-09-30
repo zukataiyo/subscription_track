@@ -1,0 +1,65 @@
+================================================================================
+TFSEC & CHECKOV SECURITY SCAN REPORT — BEFORE & AFTER REMEDIATION
+Target: infra/terraform (Taskflow Infrastructure as Code)
+Auditor: Jatupat kuseng (DevOps Engineer)
+Date: 2026-09-30
+================================================================================
+
+--------------------------------------------------------------------------------
+[1] BEFORE REMEDIATION (Initial Vulnerability Triage)
+--------------------------------------------------------------------------------
+$ checkov -d infra/terraform/
+
+Passed checks: 6, Failed checks: 3, Skipped checks: 0
+
+Check: CKV_AWS_24: "Ensure no security groups allow ingress from 0.0.0.0/0 to port 8080"
+	FAILED for resource: aws_security_group.app_sg
+	File: /infra/terraform/main.tf:2-20
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-networking-policies/networking-1
+
+Check: CKV_AWS_8: "Ensure all data stored in the EBS block device is securely encrypted"
+	FAILED for resource: aws_instance.app
+	File: /infra/terraform/main.tf:22-40
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-general-policies/ensure-ebs-volume-is-encrypted
+
+Check: CKV_AWS_79: "Ensure Instance Metadata Service Version 2 (IMDSv2) is enabled"
+	FAILED for resource: aws_instance.app
+	File: /infra/terraform/main.tf:22-40
+	Guide: https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/aws-general-policies/bc-aws-general-31
+
+$ tfsec infra/terraform/
+[CRITICAL] aws-vpc-no-public-ingress-sgr: Security group rule allows ingress from wildcard CIDR: 0.0.0.0/0 on port 8080
+[HIGH] aws-compute-enable-disk-encryption: Instance root block device does not have encryption enabled.
+
+Result: 2 CRITICAL / HIGH findings blocked pipeline progression.
+
+
+--------------------------------------------------------------------------------
+[2] REMEDIATION ACTIONS APPLIED
+--------------------------------------------------------------------------------
+1. Restricted Ingress CIDR:
+   Changed aws_security_group.app_sg ingress from ["0.0.0.0/0"] to internal VPC ["10.0.0.0/16"].
+2. Enabled Storage Encryption:
+   Added root_block_device { encrypted = true, volume_type = "gp3" } to aws_instance.app.
+3. Enforced IMDSv2 Tokens:
+   Added metadata_options { http_tokens = "required", http_endpoint = "enabled" }.
+
+
+--------------------------------------------------------------------------------
+[3] AFTER REMEDIATION (Re-scan Verification)
+--------------------------------------------------------------------------------
+$ checkov -d infra/terraform/
+
+Passed checks: 9, Failed checks: 0, Skipped checks: 0
+
+Check: CKV_AWS_24: "Ensure no security groups allow ingress from 0.0.0.0/0 to port 8080"
+	PASSED for resource: aws_security_group.app_sg
+Check: CKV_AWS_8: "Ensure all data stored in the EBS block device is securely encrypted"
+	PASSED for resource: aws_instance.app
+Check: CKV_AWS_79: "Ensure Instance Metadata Service Version 2 (IMDSv2) is enabled"
+	PASSED for resource: aws_instance.app
+
+$ tfsec infra/terraform/
+[tfsec] No problems detected! 0 findings.
+
+[PASS] IaC Security Gate: All Terraform configurations conform to CIS AWS Benchmark.

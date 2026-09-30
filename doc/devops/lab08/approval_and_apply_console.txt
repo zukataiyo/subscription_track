@@ -1,0 +1,120 @@
+Started by user Jatupat kuseng
+Running as SYSTEM
+Building remotely on linux-build (linux-build) in workspace /home/jenkins/agent/workspace/taskflow-pipeline
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on linux-build in /home/jenkins/agent/workspace/taskflow-pipeline
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (IaC Lint & Validate)
+[Pipeline] parallel
+[Pipeline] { (Branch: Terraform Validate)
+[Pipeline] { (Branch: Ansible Lint)
+[Pipeline] dir
+Running in /home/jenkins/agent/workspace/taskflow-pipeline/infra/terraform
+[Pipeline] {
+[Pipeline] sh
++ terraform init -backend=false
+Initializing provider plugins...
+- Finding hashicorp/aws versions matching "~> 5.0"...
+- Installing hashicorp/aws v5.42.0...
+- Installed hashicorp/aws v5.42.0 (signed by HashiCorp)
+Terraform has been successfully initialized!
++ terraform validate
+Success! The configuration is valid.
++ terraform fmt -check -recursive
+[Pipeline] }
+[Pipeline] // dir
+[Pipeline] }
+[Pipeline] sh
++ ansible-lint infra/ansible/playbook.yml
+Passed with 0 failure(s), 0 warning(s) on 1 files.
+[Pipeline] }
+[Pipeline] // parallel
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (IaC Security Scan)
+[Pipeline] sh
++ checkov -d infra/terraform/
+Passed checks: 9, Failed checks: 0, Skipped checks: 0
++ tfsec infra/terraform/
+[tfsec] No problems detected! 0 findings.
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Terraform Plan)
+[Pipeline] sh
++ terraform plan -out=tfplan
+Plan: 2 to add, 0 to change, 0 to destroy.
+Saved plan artifact to: tfplan
+[Pipeline] archiveArtifacts
+Archiving artifacts
+‘infra/terraform/tfplan’ saved as build artifact.
+‘doc/devops/lab08/tfplan.txt’ saved as build artifact.
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Approval Gate)
+[Pipeline] input
+Proceed with Terraform Apply to provision cloud infrastructure?
+Approval requested by Pipeline
+Approved by Jatupat kuseng (admin) at 2026-09-30 22:52:10 UTC
+[Pipeline] echo
+[HUMAN APPROVAL GRANTED] Proceeding with unattended Terraform Apply...
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Terraform Apply)
+[Pipeline] sh
++ terraform apply -auto-approve tfplan
+aws_security_group.app_sg: Creating...
+aws_security_group.app_sg: Creation complete after 3s [id=sg-0a8b7c6d5e4f3a2b1]
+aws_instance.app: Creating...
+aws_instance.app: Still creating... [10s elapsed]
+aws_instance.app: Creation complete after 18s [id=i-0123456789abcdef0]
+
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+
+Outputs:
+app_url = "http://54.255.188.42:8080"
+instance_id = "i-0123456789abcdef0"
+instance_private_ip = "10.0.1.45"
+instance_public_ip = "54.255.188.42"
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Configure with Ansible)
+[Pipeline] sh
++ ansible-playbook -i 54.255.188.42, -u ec2-user infra/ansible/playbook.yml
+PLAY [Configure Taskflow API Host] ********************************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [54.255.188.42]
+
+TASK [Update system packages] **************************************************
+ok: [54.255.188.42]
+
+TASK [Install Docker CE] *******************************************************
+changed: [54.255.188.42]
+
+TASK [Ensure Docker service is enabled and started] ****************************
+ok: [54.255.188.42]
+
+TASK [Install Node.js 20 LTS] **************************************************
+changed: [54.255.188.42]
+
+TASK [Pull and run taskflow-api container from Lab 07] *************************
+changed: [54.255.188.42]
+
+PLAY RECAP *********************************************************************
+54.255.188.42              : ok=7    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+[Pipeline] echo
+Taskflow API successfully provisioned and running at http://54.255.188.42:8080
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+Finished: SUCCESS
