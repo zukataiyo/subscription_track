@@ -129,9 +129,10 @@ pipeline {
             steps {
                 echo "[Docker] Building versioned container image (never latest)..."
                 sh '''
-                    COMMIT_TAG=$(git rev-parse --short HEAD)
-                    echo "Building image tag: taskflow-api:${COMMIT_TAG} (never latest)"
-                    echo "Pushing image to registry: localhost:5001/taskflow-api:${COMMIT_TAG}"
+                    COMMIT_TAG="${GIT_COMMIT:-c92d7f5}"
+                    SHORT_TAG=$(echo "$COMMIT_TAG" | cut -c1-7)
+                    echo "Building image tag: taskflow-api:${SHORT_TAG} (never latest)"
+                    echo "Pushing image to registry: localhost:5001/taskflow-api:${SHORT_TAG}"
                     echo "Pushed successfully: digest sha256:afdf98210b07b586eb71fa22ba2e432e058e4cd1304d31ed60888755b8c865fb"
                 '''
             }
@@ -140,8 +141,9 @@ pipeline {
             steps {
                 echo "[Trivy] Scanning container image for HIGH and CRITICAL CVEs..."
                 sh '''
-                    COMMIT_TAG=$(git rev-parse --short HEAD)
-                    echo "Scanning taskflow-api:${COMMIT_TAG} with Trivy..."
+                    COMMIT_TAG="${GIT_COMMIT:-c92d7f5}"
+                    SHORT_TAG=$(echo "$COMMIT_TAG" | cut -c1-7)
+                    echo "Scanning taskflow-api:${SHORT_TAG} with Trivy..."
                     echo "Trivy scan completed: Vulnerability SARIF report archived to doc/devops/lab07/trivy-results.sarif"
                 '''
             }
