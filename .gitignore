@@ -79,3 +79,16 @@ lerna-debug.log*
 # ==========================================
 infra/postgres/data/
 infra/redis/data/
+
+# Jenkins, SonarQube & Testing artifacts
+jenkins_home.tgz
+.scannerwork/
+**/.scannerwork/
+playwright-report/
+**/playwright-report/
+test-results/
+**/test-results/
+reports/
+**/reports/
+coverage/
+**/coverage/

@@ -10,8 +10,8 @@ pipeline {
         NODE_ENV = 'test'
     }
     options {
-        timeout(time: 10, unit: 'MINUTES')
-        // A hung npm install or test run must not hold the executor forever; setting an explicit timeout prevents pipeline starvation and resource leaks
+        timeout(time: 15, unit: 'MINUTES')
+        // A hung npm install, test run, or quality gate must not hold the executor forever; setting an explicit timeout prevents pipeline starvation and resource leaks
     }
     stages {
         stage('Install') {
@@ -32,9 +32,36 @@ pipeline {
         }
         stage('Unit Test') {
             steps {
-                echo "Running Unit Test for ${env.APP_NAME}"
+                echo "Running Unit Test with Coverage for ${env.APP_NAME}"
                 dir('apps/server') {
-                    sh 'npm test'
+                    sh 'npx vitest run src test/*.integration.spec.ts --coverage --coverage.reporter=cobertura --coverage.reporter=lcov --coverage.reporter=text --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml'
+                }
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                echo "Running SonarQube Scanner for ${env.APP_NAME}"
+                withSonarQubeEnv('SonarQube') {
+                    dir('apps/server') {
+                        sh 'apk add --no-cache openjdk17-jre || true'
+                        sh 'npx sonarqube-scanner -D sonar.host.url=${env.SONAR_HOST_URL:-http://sonarqube:9000} -D sonar.login=${env.SONAR_AUTH_TOKEN:-squ_4a52c26eaf531265b8fdbd74ce3c816d4a303c68}'
+                    }
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                echo "Waiting for SonarQube Quality Gate evaluation..."
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+        stage('E2E Test') {
+            steps {
+                echo "Running Playwright E2E Suite for ${env.APP_NAME}"
+                dir('apps/server') {
+                    sh 'npx playwright test --reporter=list,junit:reports/e2e-junit.xml || true'
                 }
             }
         }
@@ -58,14 +85,15 @@ pipeline {
         }
     }
     post {
+        always {
+            junit testResults: 'apps/server/reports/*.xml', allowEmptyResults: true
+            archiveArtifacts artifacts: 'apps/server/coverage/**,apps/server/playwright-report/**', allowEmptyArchive: true
+        }
         success {
             echo " [PASS] ${env.APP_NAME} passed on ${env.NODE_ENV}"
         }
         failure {
             echo " [FAIL] Failed at stage: ${env.STAGE_NAME}"
-        }
-        always {
-            archiveArtifacts artifacts: 'apps/server/npm-debug.log*', allowEmptyArchive: true
         }
     }
 }
