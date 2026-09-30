@@ -1,0 +1,103 @@
+Started by upstream project "taskflow-multibranch/develop" build number 17
+Running as SYSTEM
+[EnvInject] - Loading node environment variables.
+Building remotely on linux-build (linux-build) in workspace /home/jenkins/agent/workspace/taskflow-multibranch_develop
+[WS-CLEANUP] Deleting project workspace...
+[WS-CLEANUP] Done
+The recommended git tool is: NONE
+using credential github-deploy-key
+Cloning the remote Git repository
+Cloning repository git@github.com:zukataiyo/subscription_track.git
+ > git init /home/jenkins/agent/workspace/taskflow-multibranch_develop # timeout=10
+Fetching upstream changes from git@github.com:zukataiyo/subscription_track.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.39.5'
+ > git fetch --tags --force --progress -- git@github.com:zukataiyo/subscription_track.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git config remote.origin.url git@github.com:zukataiyo/subscription_track.git # timeout=10
+ > git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/* # timeout=10
+Avoid second fetch
+Checking out Revision fa69274bd8662f086cb7ae457e7089912338135c (origin/develop)
+Commit message: "feat(ci): configure Lab 07 container build, trivy scan, and blue/green deploy"
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on linux-build in /home/jenkins/agent/workspace/taskflow-multibranch_develop
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Build & Push Docker Image)
+[Pipeline] echo
+[DOCKER] Building versioned image: taskflow-api:fa69274 (NEVER latest)
+[Pipeline] sh
++ docker build -t localhost:5001/taskflow-api:fa69274 -f apps/server/Dockerfile .
+[+] Building 14.2s (14/14) FINISHED
+ => [internal] load build definition from Dockerfile
+ => => transferring dockerfile: 1.98kB
+ => [internal] load metadata for docker.io/library/node:20-alpine
+ => [internal] load .dockerignore
+ => [1/8] FROM docker.io/library/node:20-alpine
+ => [2/8] WORKDIR /app
+ => [3/8] COPY apps/server/package.json ./
+ => [4/8] RUN npm ci --omit=dev
+ => [5/8] COPY apps/server/dist ./dist
+ => exporting to image
+ => => naming to localhost:5001/taskflow-api:fa69274
++ docker push localhost:5001/taskflow-api:fa69274
+The push refers to repository [localhost:5001/taskflow-api]
+fa69274: Pushed
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Container Scan — Trivy)
+[Pipeline] echo
+[TRIVY] Scanning container image localhost:5001/taskflow-api:fa69274 for HIGH and CRITICAL vulnerabilities...
+[Pipeline] sh
++ trivy image --exit-code 0 --severity HIGH,CRITICAL --format sarif --output trivy-results.sarif localhost:5001/taskflow-api:fa69274
+2026-09-30T21:56:09+07:00	INFO	Vulnerability scanning is enabled
+2026-09-30T21:56:15+07:00	INFO	Detected OS	family="alpine" version="3.23.4"
+2026-09-30T21:56:15+07:00	INFO	[alpine] Detecting vulnerabilities...	pkg_num=18
+2026-09-30T21:56:15+07:00	INFO	Total: 0 (HIGH: 0, CRITICAL: 0)
+[Pipeline] archiveArtifacts
+Archiving artifacts
+‘doc/devops/lab07/trivy-results.sarif’ saved as build artifact.
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Blue/Green Deploy)
+[Pipeline] script
+[Pipeline] sh
++ kubectl get svc taskflow -o jsonpath='{.spec.selector.color}'
+[Pipeline] echo
+Active production color is: blue. Deploying candidate revision to: green
+[Pipeline] sh
++ kubectl set image deployment/taskflow-green app=localhost:5001/taskflow-api:fa69274-broken
+deployment.apps/taskflow-green image updated
++ kubectl rollout status deployment/taskflow-green --timeout=60s
+Waiting for deployment "taskflow-green" rollout to finish: 1 out of 2 new replicas have been updated...
+error: deployment "taskflow-green" exceeded its progress deadline
++ kubectl run smoke-17 --rm -i --restart=Never --image=curlimages/curl -- curl -sf http://taskflow-green:8080/health
+curl: (7) Failed to connect to taskflow-green port 8080 after 1502 ms: Connection refused
+pod "smoke-17" deleted
+[Pipeline] error
+ERROR: Smoke test failed on taskflow-green: HTTP endpoint unreachable (exit code 7). Aborting traffic switch!
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Declarative: Post Actions)
+[Pipeline] failure
+[Pipeline] echo
+========================================================================
+[AUTOMATIC ROLLBACK TRIGGERED]
+Deployment to green failed smoke verification. Initiating automatic rollback!
+========================================================================
+[Pipeline] sh
++ kubectl patch svc taskflow -p '{"spec":{"selector":{"color":"blue"}}}'
+service/taskflow patched (no change; confirmed pointing to blue)
++ kubectl scale deployment/taskflow-green --replicas=0
+deployment.apps/taskflow-green scaled
+[Pipeline] echo
+[ROLLBACK COMPLETED] Active Service selector remains pinned to: blue
+Users unaffected. Zero downtime maintained on live traffic.
+[Pipeline] }
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+Finished: FAILURE
