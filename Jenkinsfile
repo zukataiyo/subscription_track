@@ -3,6 +3,7 @@ pipeline {
         docker {
             image 'node:20-bookworm-slim'
             label 'linux-build'
+            args '--network jenkins-net'
         }
     }
     environment {
