@@ -1,0 +1,114 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:6c9b3d11-5491-4d32-9cb0-394bf342de1e",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-09-30T10:45:00Z",
+    "tools": [
+      {
+        "vendor": "anchore",
+        "name": "syft",
+        "version": "1.0.1"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "bom-ref": "pkg:npm/subscription-track-api@0.0.1",
+      "name": "subscription-track-api",
+      "version": "0.0.1",
+      "description": "Subscription Track Backend Server (NestJS Modular Monolith)",
+      "purl": "pkg:npm/subscription-track-api@0.0.1"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@nestjs/core@12.0.4",
+      "name": "@nestjs/core",
+      "version": "12.0.4",
+      "description": "Nest - modern, fast, powerful node.js web framework",
+      "licenses": [{ "license": { "id": "MIT" } }],
+      "purl": "pkg:npm/%40nestjs/core@12.0.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@nestjs/common@12.0.4",
+      "name": "@nestjs/common",
+      "version": "12.0.4",
+      "description": "Nest - modern, fast, powerful node.js web framework",
+      "licenses": [{ "license": { "id": "MIT" } }],
+      "purl": "pkg:npm/%40nestjs/common@12.0.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@nestjs/platform-express@12.0.4",
+      "name": "@nestjs/platform-express",
+      "version": "12.0.4",
+      "description": "Nest - modern, fast, powerful node.js web framework (platform-express)",
+      "licenses": [{ "license": { "id": "MIT" } }],
+      "purl": "pkg:npm/%40nestjs/platform-express@12.0.4"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@nestjs/jwt@12.0.2",
+      "name": "@nestjs/jwt",
+      "version": "12.0.2",
+      "description": "Nest - modern, fast, powerful node.js web framework (jwt)",
+      "licenses": [{ "license": { "id": "MIT" } }],
+      "purl": "pkg:npm/%40nestjs/jwt@12.0.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@nestjs/bullmq@12.0.0",
+      "name": "@nestjs/bullmq",
+      "version": "12.0.0",
+      "description": "NestJS BullMQ module",
+      "licenses": [{ "license": { "id": "MIT" } }],
+      "purl": "pkg:npm/%40nestjs/bullmq@12.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/@prisma/client@6.3.1",
+      "name": "@prisma/client",
+      "version": "6.3.1",
+      "description": "Prisma Client is an auto-generated, type-safe and modern JavaScript/TypeScript ORM",
+      "licenses": [{ "license": { "id": "Apache-2.0" } }],
+      "purl": "pkg:npm/%40prisma/client@6.3.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/bcrypt@5.1.1",
+      "name": "bcrypt",
+      "version": "5.1.1",
+      "description": "A bcrypt library for NodeJS",
+      "licenses": [{ "license": { "id": "MIT" } }],
+      "purl": "pkg:npm/bcrypt@5.1.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkg:npm/ioredis@5.4.2",
+      "name": "ioredis",
+      "version": "5.4.2",
+      "description": "A robust, performance-focused and full-featured Redis client for Node.js",
+      "licenses": [{ "license": { "id": "MIT" } }],
+      "purl": "pkg:npm/ioredis@5.4.2"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/subscription-track-api@0.0.1",
+      "dependsOn": [
+        "pkg:npm/@nestjs/core@12.0.4",
+        "pkg:npm/@nestjs/common@12.0.4",
+        "pkg:npm/@nestjs/platform-express@12.0.4",
+        "pkg:npm/@nestjs/jwt@12.0.2",
+        "pkg:npm/@nestjs/bullmq@12.0.0",
+        "pkg:npm/@prisma/client@6.3.1",
+        "pkg:npm/bcrypt@5.1.1",
+        "pkg:npm/ioredis@5.4.2"
+      ]
+    }
+  ]
+}

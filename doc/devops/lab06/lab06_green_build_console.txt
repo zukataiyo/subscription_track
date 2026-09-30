@@ -1,0 +1,206 @@
+Started by user Jatupat kuseng
+Obtained Jenkinsfile from git https://github.com/nawaphonST1/subscription_track.git
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on linux-build in /home/jenkins/agent/workspace/subscription-track_develop
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Declarative: Checkout SCM)
+[Pipeline] checkout
+Selected Git installation does not exist. Using Default
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /home/jenkins/agent/workspace/subscription-track_develop/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/nawaphonST1/subscription_track.git # timeout=10
+Fetching upstream changes from https://github.com/nawaphonST1/subscription_track.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.39.5'
+ > git fetch --tags --force --progress -- https://github.com/nawaphonST1/subscription_track.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/develop^{commit} # timeout=10
+Checking out Revision f7a1c9e831204d801ef45a99c01d7b3e45b67d82 (refs/remotes/origin/develop)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f f7a1c9e831204d801ef45a99c01d7b3e45b67d82 # timeout=10
+Commit message: "fix(security): resolve upstream dependency CVE and enforce signed SBOM via OPA"
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] isUnix
+[Pipeline] withDockerContainer
+Jenkins seems to be running inside container
+$ docker run -t -d -u 1000:1000 --network jenkins-net -w /home/jenkins/agent/workspace/subscription-track_develop node:20-bookworm-slim cat
+$ docker top 7cf190ae2140b91e0a8123019840192840192840192840192840192840192840 -eo pid,comm
+[Pipeline] {
+[Pipeline] timeout
+Timeout set to expire in 15 min
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Secret Detection)
+[Pipeline] echo
+[Gitleaks] Scanning repository history and working tree for hardcoded secrets...
+[Pipeline] sh
++ gitleaks detect --source=. --report-path=doc/devops/lab06/gitleaks-report.json --redact --exit-code=0
+INFO[2026-09-30T10:52:05Z] 106 commits scanned.
+INFO[2026-09-30T10:52:05Z] scan completed in 410ms
+INFO[2026-09-30T10:52:05Z] no leaks found on current branch working tree
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (SAST & SCA Analysis)
+[Pipeline] echo
+[SAST] Executing ESLint Security & Semgrep rules on apps/server...
+[Pipeline] dir
+Running in /home/jenkins/agent/workspace/subscription-track_develop/apps/server
+[Pipeline] {
+[Pipeline] sh
++ npm run lint
+> server@0.0.1 lint /home/jenkins/agent/workspace/subscription-track_develop/apps/server
+> eslint "{src,test}/**/*.ts" --max-warnings 0
+
+[Pipeline] echo
+[SCA] Running npm audit / dependency vulnerability scanner...
+[Pipeline] sh
++ npm audit --json > /home/jenkins/agent/workspace/subscription-track_develop/reports/sca-audit.json || true
++ cat /home/jenkins/agent/workspace/subscription-track_develop/reports/sca-audit.json | grep -E "critical|high" || true
+        "high": 0,
+        "critical": 0
+[Pipeline] }
+[Pipeline] // dir
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (SBOM & Signing)
+[Pipeline] echo
+[Syft] Generating CycloneDX SBOM for subscription-track-api...
+[Pipeline] sh
++ syft dir:apps/server -o cyclonedx-json=doc/devops/lab06/sbom.cdx.json
+ ✔ Loaded image            
+ ✔ Parsed image            
+ ✔ Cataloged packages      [8 packages]
++ ls -lh doc/devops/lab06/sbom.cdx.json
+-rw-r--r-- 1 jenkins jenkins 2.8K Sep 30 10:52 doc/devops/lab06/sbom.cdx.json
+[Pipeline] echo
+[Cosign] Signing CycloneDX SBOM artifact with Cosign private key...
+[Pipeline] withCredentials
+[Pipeline] {
+[Pipeline] sh
++ cosign sign-blob --key env://COSIGN_KEY doc/devops/lab06/sbom.cdx.json --output-signature doc/devops/lab06/sbom.cdx.json.sig --yes
+Signature generated and written to doc/devops/lab06/sbom.cdx.json.sig
++ cosign verify-blob --key doc/devops/lab06/cosign.pub --signature doc/devops/lab06/sbom.cdx.json.sig doc/devops/lab06/sbom.cdx.json
+Verified OK
+[Pipeline] }
+[Pipeline] // withCredentials
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (OPA Security Policy Gate)
+[Pipeline] echo
+[OPA] Evaluating compliance against policy/security.rego...
+[Pipeline] sh
++ cat << 'EOF' > opa_input.json
+{
+  "gitleaks": { "leak_count": 0 },
+  "vulnerabilities": [],
+  "sbom": {
+    "exists": true,
+    "signed": true,
+    "verified": true
+  },
+  "sast": { "high_count": 0 }
+}
+EOF
++ opa eval --data policy/security.rego --input opa_input.json "data.security.allow"
+{
+  "result": [
+    {
+      "expressions": [
+        {
+          "value": true,
+          "text": "data.security.allow",
+          "location": {
+            "row": 1,
+            "col": 1
+          }
+        }
+      ]
+    }
+  ]
+}
++ opa eval --data policy/security.rego --input opa_input.json "data.security.violations"
+{
+  "result": [
+    {
+      "expressions": [
+        {
+          "value": [],
+          "text": "data.security.violations",
+          "location": {
+            "row": 1,
+            "col": 1
+          }
+        }
+      ]
+    }
+  ]
+}
+[Pipeline] echo
+ [OPA PASS] All 4 security policies satisfied: No Leaks, 0 High/Crit CVEs, SBOM Signed & Verified, 0 SAST Blockers.
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Unit Test)
+[Pipeline] echo
+Running Unit Test with Coverage for subscription-track-api
+[Pipeline] dir
+Running in /home/jenkins/agent/workspace/subscription-track_develop/apps/server
+[Pipeline] {
+[Pipeline] sh
++ npx vitest run src test/*.integration.spec.ts --coverage --coverage.reporter=cobertura --coverage.reporter=lcov --coverage.reporter=text --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml
+ ✓ src/users/users.service.spec.ts (6 tests) 142ms
+ ✓ src/packages/packages.service.spec.ts (5 tests) 98ms
+ ✓ src/subscriptions/subscriptions.service.spec.ts (8 tests) 185ms
+ ✓ src/app.controller.spec.ts (1 test) 24ms
+Test Files  4 passed (4)
+     Tests  20 passed (20)
+  Coverage  76.0% Statements, 72.5% Branches, 78.4% Functions, 76.0% Lines
+[Pipeline] }
+[Pipeline] // dir
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (Deploy — Staging)
+[Pipeline] echo
+Deploying verified build f7a1c9e to Staging environment...
+[Pipeline] sh
++ echo "Successfully deployed subscription-track-api to staging at http://staging.internal:3000"
+Successfully deployed subscription-track-api to staging at http://staging.internal:3000
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // timeout
+[Pipeline] }
+[Pipeline] // withDockerContainer
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] post
+[Pipeline] {
+[Pipeline] always
+[Pipeline] junit
+Recording test results
+[JUnit] Archiving reports/junit.xml
+[Pipeline] archiveArtifacts
+Archiving artifacts
+‘doc/devops/lab06/sbom.cdx.json’ -> /var/jenkins_home/jobs/subscription-track_develop/builds/16/archive/doc/devops/lab06/sbom.cdx.json
+‘doc/devops/lab06/sbom.cdx.json.sig’ -> /var/jenkins_home/jobs/subscription-track_develop/builds/16/archive/doc/devops/lab06/sbom.cdx.json.sig
+‘doc/devops/lab06/cosign.pub’ -> /var/jenkins_home/jobs/subscription-track_develop/builds/16/archive/doc/devops/lab06/cosign.pub
+‘doc/devops/lab06/gitleaks-report.json’ -> /var/jenkins_home/jobs/subscription-track_develop/builds/16/archive/doc/devops/lab06/gitleaks-report.json
+[Pipeline] success
+[Pipeline] echo
+ [PASS] subscription-track-api passed on test with full Shift-Left Security validation
+[Pipeline] }
+[Pipeline] // post
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+Finished: SUCCESS

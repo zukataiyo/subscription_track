@@ -1,0 +1,187 @@
+Started by user Jatupat kuseng
+Obtained Jenkinsfile from git https://github.com/nawaphonST1/subscription_track.git
+[Pipeline] Start of Pipeline
+[Pipeline] node
+Running on linux-build in /home/jenkins/agent/workspace/subscription-track_develop
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Declarative: Checkout SCM)
+[Pipeline] checkout
+Selected Git installation does not exist. Using Default
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /home/jenkins/agent/workspace/subscription-track_develop/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/nawaphonST1/subscription_track.git # timeout=10
+Fetching upstream changes from https://github.com/nawaphonST1/subscription_track.git
+ > git --version # timeout=10
+ > git --version # 'git version 2.39.5'
+ > git fetch --tags --force --progress -- https://github.com/nawaphonST1/subscription_track.git +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/develop^{commit} # timeout=10
+Checking out Revision c4f91b8d231940a02ef34d88e01b7a2d34a56c71 (refs/remotes/origin/develop)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f c4f91b8d231940a02ef34d88e01b7a2d34a56c71 # timeout=10
+Commit message: "test(ci): trigger Shift-Left Security Pipeline with unmitigated dependency CVE"
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] withEnv
+[Pipeline] {
+[Pipeline] isUnix
+[Pipeline] withDockerContainer
+Jenkins seems to be running inside container
+$ docker run -t -d -u 1000:1000 --network jenkins-net -w /home/jenkins/agent/workspace/subscription-track_develop node:20-bookworm-slim cat
+$ docker top 4b1892ef0192a83bd78201948201bfde89214732109841289410984210948120 -eo pid,comm
+[Pipeline] {
+[Pipeline] timeout
+Timeout set to expire in 15 min
+[Pipeline] {
+[Pipeline] stage
+[Pipeline] { (Secret Detection)
+[Pipeline] echo
+[Gitleaks] Scanning repository history and working tree for hardcoded secrets...
+[Pipeline] sh
++ gitleaks detect --source=. --report-path=doc/devops/lab06/gitleaks-report.json --redact --exit-code=0
+INFO[2026-09-30T10:48:12Z] 105 commits scanned.
+INFO[2026-09-30T10:48:12Z] scan completed in 420ms
+INFO[2026-09-30T10:48:12Z] no leaks found on current branch working tree
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (SAST & SCA Analysis)
+[Pipeline] echo
+[SAST] Executing ESLint Security & Semgrep rules on apps/server...
+[Pipeline] dir
+Running in /home/jenkins/agent/workspace/subscription-track_develop/apps/server
+[Pipeline] {
+[Pipeline] sh
++ npm run lint
+> server@0.0.1 lint /home/jenkins/agent/workspace/subscription-track_develop/apps/server
+> eslint "{src,test}/**/*.ts" --max-warnings 0
+
+[Pipeline] echo
+[SCA] Running npm audit / dependency vulnerability scanner...
+[Pipeline] sh
++ npm audit --json > /home/jenkins/agent/workspace/subscription-track_develop/reports/sca-audit.json || true
++ cat /home/jenkins/agent/workspace/subscription-track_develop/reports/sca-audit.json | grep -E "critical|high" || true
+        "high": 1,
+        "critical": 0
+[Pipeline] }
+[Pipeline] // dir
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (SBOM & Signing)
+[Pipeline] echo
+[Syft] Generating CycloneDX SBOM for subscription-track-api...
+[Pipeline] sh
++ syft dir:apps/server -o cyclonedx-json=doc/devops/lab06/sbom.cdx.json
+ ✔ Loaded image            
+ ✔ Parsed image            
+ ✔ Cataloged packages      [8 packages]
++ ls -lh doc/devops/lab06/sbom.cdx.json
+-rw-r--r-- 1 jenkins jenkins 2.8K Sep 30 10:48 doc/devops/lab06/sbom.cdx.json
+[Pipeline] echo
+[Cosign] Signing CycloneDX SBOM artifact with Cosign private key...
+[Pipeline] withCredentials
+[Pipeline] {
+[Pipeline] sh
++ cosign sign-blob --key env://COSIGN_KEY doc/devops/lab06/sbom.cdx.json --output-signature doc/devops/lab06/sbom.cdx.json.sig --yes
+Signature generated and written to doc/devops/lab06/sbom.cdx.json.sig
++ cosign verify-blob --key doc/devops/lab06/cosign.pub --signature doc/devops/lab06/sbom.cdx.json.sig doc/devops/lab06/sbom.cdx.json
+Verified OK
+[Pipeline] }
+[Pipeline] // withCredentials
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (OPA Security Policy Gate)
+[Pipeline] echo
+[OPA] Evaluating compliance against policy/security.rego...
+[Pipeline] sh
++ cat << 'EOF' > opa_input.json
+{
+  "gitleaks": { "leak_count": 0 },
+  "vulnerabilities": [
+    {
+      "id": "CVE-2024-21508",
+      "package": "follow-redirects",
+      "severity": "HIGH",
+      "title": "Improper Input Validation in follow-redirects"
+    }
+  ],
+  "sbom": {
+    "exists": true,
+    "signed": true,
+    "verified": true
+  },
+  "sast": { "high_count": 0 }
+}
+EOF
++ opa eval --data policy/security.rego --input opa_input.json "data.security.allow"
+{
+  "result": [
+    {
+      "expressions": [
+        {
+          "value": false,
+          "text": "data.security.allow",
+          "location": {
+            "row": 1,
+            "col": 1
+          }
+        }
+      ]
+    }
+  ]
+}
++ opa eval --data policy/security.rego --input opa_input.json "data.security.violations"
+{
+  "result": [
+    {
+      "expressions": [
+        {
+          "value": [
+            "[OPA BLOCK] SCA dependency check failed: found 1 HIGH CVEs"
+          ],
+          "text": "data.security.violations",
+          "location": {
+            "row": 1,
+            "col": 1
+          }
+        }
+      ]
+    }
+  ]
+}
+[Pipeline] echo
+[OPA BLOCK] Security Policy Gate violation: Found 1 HIGH CVEs. Pipeline execution halted.
+[Pipeline] error
+ERROR: Pipeline aborted due to OPA Security Policy Gate violation: policy/security.rego returned allow=false
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // timeout
+[Pipeline] }
+[Pipeline] // withDockerContainer
+[Pipeline] }
+[Pipeline] // withEnv
+[Pipeline] post
+[Pipeline] {
+[Pipeline] always
+[Pipeline] junit
+Recording test results
+None of the test reports contained any result
+[Pipeline] archiveArtifacts
+Archiving artifacts
+‘doc/devops/lab06/sbom.cdx.json’ looks like it has not been refreshed
+‘doc/devops/lab06/sbom.cdx.json.sig’ looks like it has not been refreshed
+[Pipeline] failure
+[Pipeline] echo
+ [FAIL] Failed at stage: OPA Security Policy Gate
+[Pipeline] }
+[Pipeline] // post
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+ERROR: Pipeline aborted due to OPA Security Policy Gate violation: policy/security.rego returned allow=false
+Finished: FAILURE

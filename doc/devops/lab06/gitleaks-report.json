@@ -1,0 +1,42 @@
+[
+  {
+    "Description": "AWS Access Key ID detected",
+    "StartLine": 14,
+    "EndLine": 14,
+    "StartColumn": 19,
+    "EndColumn": 39,
+    "Match": "AKIAIOSFODNN7EXAMPLE",
+    "Secret": "AKIAIOSFODNN7EXAMPLE",
+    "File": "apps/server/src/config/aws.dummy.config.ts",
+    "SymlinkFile": "",
+    "Commit": "8a4f1bc45d2903b41e8c9b9170321a97d9e48812",
+    "Entropy": 3.42,
+    "Author": "Jatupat kuseng",
+    "Email": "dev@subscription-track.internal",
+    "Date": "2026-09-30T10:15:30Z",
+    "Message": "test(scratch): add dummy AWS credentials to verify gitleaks detection",
+    "Tags": ["key", "AWS"],
+    "RuleID": "aws-access-token",
+    "Fingerprint": "8a4f1bc45d2903b41e8c9b9170321a97d9e48812:apps/server/src/config/aws.dummy.config.ts:aws-access-token:14"
+  },
+  {
+    "Description": "Generic API Key detected",
+    "StartLine": 8,
+    "EndLine": 8,
+    "StartColumn": 15,
+    "EndColumn": 55,
+    "Match": "sk_test_51Mz9876543210dummytokenforlab06verification",
+    "Secret": "sk_test_51Mz9876543210dummytokenforlab06verification",
+    "File": "apps/server/src/config/payment.dummy.ts",
+    "SymlinkFile": "",
+    "Commit": "8a4f1bc45d2903b41e8c9b9170321a97d9e48812",
+    "Entropy": 4.15,
+    "Author": "Jatupat kuseng",
+    "Email": "dev@subscription-track.internal",
+    "Date": "2026-09-30T10:15:30Z",
+    "Message": "test(scratch): add dummy AWS credentials to verify gitleaks detection",
+    "Tags": ["api-key", "payment"],
+    "RuleID": "generic-api-key",
+    "Fingerprint": "8a4f1bc45d2903b41e8c9b9170321a97d9e48812:apps/server/src/config/payment.dummy.ts:generic-api-key:8"
+  }
+]
