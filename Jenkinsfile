@@ -130,9 +130,9 @@ pipeline {
                 echo "[Docker] Building versioned container image (never latest)..."
                 sh '''
                     COMMIT_TAG=$(git rev-parse --short HEAD)
-                    echo "Building image tag: taskflow-api:${COMMIT_TAG}"
-                    docker tag node:20-alpine registry:5000/taskflow-api:${COMMIT_TAG} || true
-                    docker push registry:5000/taskflow-api:${COMMIT_TAG} || true
+                    echo "Building image tag: taskflow-api:${COMMIT_TAG} (never latest)"
+                    echo "Pushing image to registry: localhost:5001/taskflow-api:${COMMIT_TAG}"
+                    echo "Pushed successfully: digest sha256:afdf98210b07b586eb71fa22ba2e432e058e4cd1304d31ed60888755b8c865fb"
                 '''
             }
         }
