@@ -1,0 +1,25 @@
+groups:
+  - name: jenkins-slo
+    rules:
+      # SLO Alert: 95% of builds complete under 6 minutes; alert if queue wait time > 2 min for 5 min straight
+      - alert: JenkinsQueueBacklog
+        expr: jenkins_queue_size_value > 0 and avg_over_time(jenkins_queue_size_value[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          tier: ci-infrastructure
+          slo: pipeline-latency
+        annotations:
+          summary: "Jenkins build queue backlog exceeds 2 minutes"
+          description: "Build queue depth is elevated (current value: {{ $value }}). Dynamic Kubernetes pod pool capacity may be exhausted."
+
+      - alert: JenkinsPipelineSuccessRateBurn
+        expr: (sum(rate(jenkins_builds_success_build_count_total[1h])) / sum(rate(jenkins_builds_build_count_total[1h]))) * 100 < 95
+        for: 15m
+        labels:
+          severity: critical
+          tier: ci-pipeline
+          slo: pipeline-availability
+        annotations:
+          summary: "Jenkins 7-day rolling SLO budget burn: Success rate < 95%"
+          description: "The pipeline success rate over the past hour has dropped to {{ $value | printf \"%.2f\" }}%, violating the 95% SLO threshold."

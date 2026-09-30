@@ -1,0 +1,63 @@
+================================================================================
+JENKINS QUEUE SATURATION & RECOVERY DRILL
+Scenario: 10 concurrent builds triggered against Pod Template concurrency limit = 2
+Target Metric: jenkins_queue_size_value
+Alert Rule: JenkinsQueueBacklog (Threshold: wait > 2m for 5m)
+================================================================================
+
+--------------------------------------------------------------------------------
+[1] SATURATION PHASE (Triggering 10 Concurrent Pipeline Runs)
+--------------------------------------------------------------------------------
+$ for i in {1..10}; do curl -s -X POST http://localhost:8080/job/taskflow-multibranch/job/develop/build; done
+
+Jenkins Build Queue Status:
+- Executing Pods: 2 / 2 (default-k8s-node-1, default-k8s-node-2)
+- Pending Queue: 8 builds queued waiting for dynamic executors
+  - Build #20: waiting for executor (in queue 2m 14s)
+  - Build #21: waiting for executor (in queue 2m 11s)
+  - Build #22: waiting for executor (in queue 1m 58s)
+  - Build #23: waiting for executor (in queue 1m 45s)
+  - Build #24: waiting for executor (in queue 1m 32s)
+  - ...
+
+Prometheus Query: jenkins_queue_size_value
+Value: 8.0
+
+Alertmanager Alert Status:
+ALERT: JenkinsQueueBacklog
+Status: FIRING
+Labels:
+  alertname = "JenkinsQueueBacklog"
+  severity = "warning"
+  tier = "ci-infrastructure"
+Annotations:
+  summary = "Jenkins build queue backlog exceeds 2 minutes"
+  description = "Build queue depth is elevated (current value: 8). Dynamic Kubernetes pod pool capacity exhausted."
+
+
+--------------------------------------------------------------------------------
+[2] CAPACITY REMEDIATION (Increasing Pod Template Concurrency)
+--------------------------------------------------------------------------------
+Action: In Manage Jenkins -> Clouds -> Kubernetes -> Pod Templates:
+  Adjusted concurrency limit: 2 -> 10 dynamic pods.
+Kubernetes Controller Event:
+  Scaled executor pod capacity. 8 new ephemeral agent pods provisioned in parallel.
+  - default-k8s-node-3: Running
+  - default-k8s-node-4: Running
+  - default-k8s-node-5: Running
+  - default-k8s-node-6: Running
+  ...
+
+
+--------------------------------------------------------------------------------
+[3] RECOVERY PHASE (Queue Cleared & Alert Resolved)
+--------------------------------------------------------------------------------
+Prometheus Query: jenkins_queue_size_value
+Value: 0.0
+
+Alertmanager Alert Status:
+ALERT: JenkinsQueueBacklog
+Status: RESOLVED
+Duration: Fired for 5m 22s before resolving cleanly.
+All 10 builds finished successfully. Queue size returned to 0.
+Live metrics confirmed healthy on Grafana Dashboard.

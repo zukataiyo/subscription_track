@@ -1,0 +1,139 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 109,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "title": "Pipeline Build Success Rate (%)",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(jenkins_builds_success_build_count_total[1h])) / sum(rate(jenkins_builds_build_count_total[1h])) * 100",
+          "legendFormat": "Success Rate",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 85 },
+              { "color": "green", "value": 95 }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "title": "p95 Build Duration (Minutes)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(jenkins_builds_duration_milliseconds_bucket[5m])) by (le)) / 1000 / 60",
+          "legendFormat": "p95 Latency",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2
+          },
+          "unit": "m"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "title": "Current Queue Length (Pending Builds)",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "jenkins_queue_size_value",
+          "legendFormat": "Queue Size",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 3 },
+              { "color": "red", "value": 8 }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      }
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["jenkins", "slo", "devops", "lab09"],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Jenkins CI/CD Pipeline Health & SLO Dashboard",
+  "uid": "jenkins-pipeline-health",
+  "version": 1
+}

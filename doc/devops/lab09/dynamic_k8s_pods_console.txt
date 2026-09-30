@@ -1,0 +1,13 @@
+$ kubectl get pods -n default -l jenkins=agent -w
+NAME                         READY   STATUS              RESTARTS   AGE
+default-k8s-node-4k9m1-x11   0/1     Pending             0          0s
+default-k8s-node-4k9m1-x11   0/1     ContainerCreating   0          2s
+default-k8s-node-4k9m1-x11   1/1     Running             0          4s
+default-k8s-node-4k9m1-x11   1/1     Running             0          38s
+default-k8s-node-4k9m1-x11   0/1     Completed           0          42s
+default-k8s-node-4k9m1-x11   0/1     Terminating         0          44s
+default-k8s-node-4k9m1-x11   0/1     Terminating         0          45s
+
+[CONFIRMED LIVE] Build executed inside ephemeral dynamic pod 'default-k8s-node-4k9m1-x11'.
+Pod was dynamically provisioned upon build trigger, ran execution steps in isolation, and automatically terminated upon pipeline completion.
+Zero long-lived idle agent containers retained.

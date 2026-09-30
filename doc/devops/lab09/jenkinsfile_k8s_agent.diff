@@ -1,0 +1,31 @@
+--- Jenkinsfile (Lab 03-08: Static Docker Agent)
++++ Jenkinsfile (Lab 09: Dynamic Kubernetes Ephemeral Pod Agent)
+@@ -1,9 +1,21 @@
+ pipeline {
+-    agent {
+-        docker {
+-            image 'node:20-bookworm-slim'
+-            args '--network jenkins-net'
+-        }
+-    }
++    agent {
++        kubernetes {
++            cloud 'kubernetes'
++            label 'k8s-node'
++            yaml '''
++apiVersion: v1
++kind: Pod
++metadata:
++  labels:
++    jenkins: agent
++spec:
++  containers:
++  - name: node
++    image: node:20-alpine
++    command: ['cat']
++    tty: true
++'''
++        }
++    }
+     environment {
+         APP_NAME = 'subscription-track-api'
