@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'node:20-alpine'
+            image 'node:20-bookworm-slim'
             label 'linux-build'
         }
     }
@@ -43,8 +43,7 @@ pipeline {
                 echo "Running SonarQube Scanner for ${env.APP_NAME}"
                 withSonarQubeEnv('SonarQube') {
                     dir('apps/server') {
-                        sh 'apk add --no-cache openjdk17-jre || true'
-                        sh 'npx sonarqube-scanner -D sonar.host.url=${env.SONAR_HOST_URL:-http://sonarqube:9000} -D sonar.login=${env.SONAR_AUTH_TOKEN:-squ_4a52c26eaf531265b8fdbd74ce3c816d4a303c68}'
+                        sh 'npx sonarqube-scanner -D sonar.host.url=http://sonarqube:9000 -D sonar.login=squ_4a52c26eaf531265b8fdbd74ce3c816d4a303c68'
                     }
                 }
             }
